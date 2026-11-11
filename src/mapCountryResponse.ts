@@ -5,6 +5,15 @@ export interface CountryApiResponse {
   region: string;
   population: number;
   languages: { name: string }[];
+
+  area?: number;
+  borders?: string[];
+  currencies?: {
+    code: string;
+    name: string;
+    symbol: string;
+  }[];
+  subregion?: string;
 }
 
 export interface Country {
@@ -14,6 +23,11 @@ export interface Country {
   region: string;
   population: number;
   languages: string[];
+
+  area?: number;
+  borders?: string[];
+  currencies?: string[];
+  subregion?: string;
 }
 
 export function mapCountryResponse(raw: CountryApiResponse): Country {
