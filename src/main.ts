@@ -48,6 +48,31 @@ const controller = new SearchController((state) => {
       population.textContent = `Population: ${country.population.toLocaleString()}`;
 
       card.append(name, capital, region, population);
+
+      const details = document.createElement('div');
+      details.hidden = true;
+
+      const area = document.createElement('p');
+      area.textContent = `Area: ${country.area ?? 'Unknown'} km²`;
+      const languages = document.createElement('p');
+      languages.textContent = `Languages: ${country.languages.join(', ')}`;
+
+      const currencies = document.createElement('p');
+      currencies.textContent = `Currencies: ${country.currencies?.join(', ') ?? 'Unknown'}`;
+
+      const borders = document.createElement('p');
+      borders.textContent = `Borders: ${country.borders?.join(', ') || 'None'}`;
+
+      const description = document.createElement('p');
+      description.textContent = `${country.name} is a country in ${country.subregion ?? country.region}.`;
+
+      details.append(description, area, languages, currencies, borders);
+      card.append(details);
+
+      card.addEventListener('click', () => {
+        details.hidden = !details.hidden;
+      });
+
       results.append(card);
     });
   }
