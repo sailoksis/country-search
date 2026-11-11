@@ -1,7 +1,12 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SearchController } from './searchController';
 
 describe('SearchController', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
   it('aborts the active request immediately when the query changes', () => {
     const controller = new SearchController();
 
@@ -13,5 +18,41 @@ describe('SearchController', () => {
 
     expect(abortSpy).toHaveBeenCalledOnce();
     expect(activeRequest.signal.aborted).toBe(true);
+  });
+
+  it('aborts a running fetch before the next debounce finishes', async () => {
+    vi.useFakeTimers();
+
+    const signals: AbortSignal[] = [];
+
+    const fetchMock = vi.fn((_url: string, options: { signal: AbortSignal }) => {
+      signals.push(options.signal);
+
+      return new Promise<Response>((_resolve, reject) => {
+        options.signal.addEventListener(
+          'abort',
+          () => {
+            reject(new DOMException('Request aborted', 'AbortError'));
+          },
+          { once: true },
+        );
+      });
+    });
+
+    vi.stubGlobal('fetch', fetchMock);
+
+    const controller = new SearchController();
+
+    controller.setQuery('sp');
+
+    await vi.advanceTimersByTimeAsync(300);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(signals[0]?.aborted).toBe(false);
+
+    controller.setQuery('spain');
+
+    expect(signals[0]?.aborted).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
