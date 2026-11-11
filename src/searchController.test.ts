@@ -55,4 +55,23 @@ describe('SearchController', () => {
     expect(signals[0]?.aborted).toBe(true);
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
+
+  it('does not start a fetch when the input is cleared before debounce finishes', async () => {
+    vi.useFakeTimers();
+
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    const controller = new SearchController();
+
+    controller.setQuery('spain');
+
+    await vi.advanceTimersByTimeAsync(100);
+
+    controller.setQuery('');
+
+    await vi.advanceTimersByTimeAsync(500);
+
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
 });

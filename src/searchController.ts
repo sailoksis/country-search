@@ -17,6 +17,7 @@ export class SearchController {
   }
 
   public setQuery(query: string): void {
+    this.debouncedSearch.cancel();
     this.cancelActiveRequest();
 
     if (query.trim() === '') {
