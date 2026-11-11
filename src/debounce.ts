@@ -1,6 +1,11 @@
 export function debounce<T extends (...args: never[]) => void>(fn: T, delay: number): T {
-  void fn;
-  void delay;
+  let timer: ReturnType<typeof setTimeout>;
 
-  throw new Error('Not implemented');
+  return ((...args: Parameters<T>) => {
+    clearTimeout(timer);
+
+    timer = setTimeout(() => {
+      fn(...args);
+    }, delay);
+  }) as T;
 }
