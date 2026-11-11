@@ -1,6 +1,17 @@
-export async function searchCountries(query: string, signal: AbortSignal): Promise<unknown[]> {
-  void query;
-  void signal;
+import { HttpError } from './HttpError';
 
-  throw new Error('Not implemented');
+export async function searchCountries(query: string, signal: AbortSignal): Promise<unknown[]> {
+  const response = await fetch(`https://countries.dev/name/${encodeURIComponent(query)}`, {
+    signal,
+  });
+
+  if (response.status === 404) {
+    return [];
+  }
+
+  if (!response.ok) {
+    throw new HttpError(response.status);
+  }
+
+  return (await response.json()) as unknown[];
 }
