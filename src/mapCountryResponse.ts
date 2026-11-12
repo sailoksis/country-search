@@ -38,5 +38,9 @@ export function mapCountryResponse(raw: CountryApiResponse): Country {
     region: raw.region,
     population: raw.population,
     languages: raw.languages.map((language) => language.name),
+    area: raw.area,
+    borders: raw.borders,
+    currencies: raw.currencies?.map((currency) => currency.name),
+    subregion: raw.subregion,
   };
 }
