@@ -1,40 +1,41 @@
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SearchController } from './searchController';
+
 afterEach(() => {
   vi.useRealTimers();
   vi.unstubAllGlobals();
 });
+
 describe('SearchController race condition', () => {
-  it('shows only the latest search result', async () => {
+  it('aborts the old request and shows only the latest result', async () => {
     vi.useFakeTimers();
 
-    const fetchMock = vi.fn();
-
-    vi.stubGlobal('fetch', fetchMock);
-
-    const pendingRequests: Array<{
+    const requests: Array<{
       resolve: (response: Response) => void;
-      reject: (error: Error) => void;
       signal: AbortSignal;
+      onAbort: ReturnType<typeof vi.fn>;
     }> = [];
 
-    fetchMock.mockImplementation((_url: string, options: { signal: AbortSignal }) => {
-      return new Promise<Response>((resolve, reject) => {
-        pendingRequests.push({
-          resolve,
-          reject,
-          signal: options.signal,
-        });
+    const fetchMock = vi.fn(
+      (_url: string, options: { signal: AbortSignal }) =>
+        new Promise<Response>((resolve, reject) => {
+          const onAbort = vi.fn(() => {
+            reject(new DOMException('Aborted', 'AbortError'));
+          });
 
-        options.signal.addEventListener(
-          'abort',
-          () => {
-            reject(new DOMException('Request aborted', 'AbortError'));
-          },
-          { once: true },
-        );
-      });
-    });
+          options.signal.addEventListener('abort', onAbort, {
+            once: true,
+          });
+
+          requests.push({
+            resolve,
+            signal: options.signal,
+            onAbort,
+          });
+        }),
+    );
+
+    vi.stubGlobal('fetch', fetchMock);
 
     const states: string[] = [];
     const results: unknown[][] = [];
@@ -47,47 +48,47 @@ describe('SearchController race condition', () => {
       }
     });
 
-    expect(controller).toBeDefined();
-
+    // Первый запрос
     controller.setQuery('sp');
-
     await vi.advanceTimersByTimeAsync(300);
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(pendingRequests).toHaveLength(1);
 
+    // Новый ввод должен немедленно отменить старый запрос
     controller.setQuery('spain');
 
-    expect(pendingRequests[0].signal.aborted).toBe(true);
+    expect(requests[0].signal.aborted).toBe(true);
+    expect(requests[0].onAbort).toHaveBeenCalledOnce();
 
     await vi.advanceTimersByTimeAsync(300);
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(pendingRequests).toHaveLength(2);
-    expect(pendingRequests[1].signal.aborted).toBe(false);
+    expect(requests[1].signal.aborted).toBe(false);
 
-    pendingRequests[1].resolve(
+    // Новый запрос завершается первым
+    requests[1].resolve(
       new Response(JSON.stringify([{ name: 'Spain' }]), {
         status: 200,
-        headers: { 'Content-Type': 'application/json' },
       }),
     );
 
     await vi.waitFor(() => {
       expect(states.at(-1)).toBe('success');
     });
-    expect(states).toEqual(['loading', 'loading', 'success']);
+
     expect(results).toEqual([[{ name: 'Spain' }]]);
 
-    pendingRequests[0].resolve(
-      new Response(JSON.stringify([{ name: 'Spain (old result)' }]), {
+    // Старый запрос пытается завершиться позже.
+    // Его Promise уже отклонён через AbortError.
+    requests[0].resolve(
+      new Response(JSON.stringify([{ name: 'Old result' }]), {
         status: 200,
-        headers: { 'Content-Type': 'application/json' },
       }),
     );
 
     await Promise.resolve();
 
+    // Старый результат не появился, ошибка отмены не показана
     expect(results).toEqual([[{ name: 'Spain' }]]);
     expect(states).toEqual(['loading', 'loading', 'success']);
   });
