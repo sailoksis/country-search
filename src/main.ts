@@ -1,3 +1,4 @@
+import './style.css';
 import { SearchController } from './searchController';
 import { mapCountryResponse, type CountryApiResponse } from './mapCountryResponse';
 
