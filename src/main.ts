@@ -37,7 +37,18 @@ const controller = new SearchController((state) => {
       const card = document.createElement('article');
 
       const name = document.createElement('h2');
-      name.textContent = `${country.flag} ${country.name}`;
+      name.textContent = country.name;
+
+      if (country.flagImage) {
+        const flag = document.createElement('img');
+        flag.src = country.flagImage;
+        flag.alt = `Flag of ${country.name}`;
+        flag.width = 40;
+        flag.height = 28;
+        flag.style.objectFit = 'contain';
+
+        name.prepend(flag, ' ');
+      }
 
       const capital = document.createElement('p');
       capital.textContent = `Capital: ${country.capital}`;

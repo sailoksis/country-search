@@ -5,6 +5,11 @@ export interface CountryApiResponse {
   region: string;
   population: number;
   languages: { name: string }[];
+  flagImage?: string;
+  flags?: {
+    svg: string;
+    png: string;
+  };
 
   area?: number;
   borders?: string[];
@@ -23,6 +28,7 @@ export interface Country {
   region: string;
   population: number;
   languages: string[];
+  flagImage?: string;
 
   area?: number;
   borders?: string[];
@@ -42,5 +48,6 @@ export function mapCountryResponse(raw: CountryApiResponse): Country {
     borders: raw.borders,
     currencies: raw.currencies?.map((currency) => currency.name),
     subregion: raw.subregion,
+    flagImage: raw.flags?.svg,
   };
 }
